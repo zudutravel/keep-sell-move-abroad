@@ -1,0 +1,183 @@
+{
+  "cashRate": "4.60% (raised 29 Sep 2026)",
+  "checkNote": "Up to date after the September RBA rise.",
+  "checkedAt": "2026-10-14T19:15:00+07:00",
+  "nextCheck": "2026-10-29",
+  "offers": [
+    {
+      "after": 5.65,
+      "bank": "ING Savings Booster",
+      "cap": 500000,
+      "conditions": "New to ING savings. After the intro, 5.65% needs $100+ balance growth each month (excluding interest). No skimming.",
+      "group": "ING",
+      "months": 4,
+      "newOnly": true,
+      "note": "From 9 Oct 2026. Savings Maximiser closes to new customers 1 Dec 2026.",
+      "rate": 6.25,
+      "type": "intro"
+    },
+    {
+      "after": 5.35,
+      "bank": "Ubank Save",
+      "cap": 1000000,
+      "conditions": "Grow balance by $1+ each month (excl. interest). Needs a Ubank Spend account.",
+      "group": "NAB",
+      "months": 4,
+      "newOnly": true,
+      "note": "Ubank is part of NAB: shares NAB's $250k guarantee cap.",
+      "rate": 6.25,
+      "type": "intro"
+    },
+    {
+      "after": 3,
+      "bank": "Revolut Instant Access Savings",
+      "cap": 50000,
+      "conditions": "No deposit or withdrawal conditions. Intro only up to $50k.",
+      "group": "Revolut",
+      "months": 3,
+      "newOnly": true,
+      "note": "Confirm Financial Claims Scheme cover before parking large sums.",
+      "rate": 6.25,
+      "type": "intro"
+    },
+    {
+      "after": 4.15,
+      "bank": "Rabobank High Interest Savings",
+      "cap": 250000,
+      "conditions": "No conditions. New accounts only.",
+      "group": "Rabobank",
+      "months": 4,
+      "newOnly": true,
+      "note": "From 13 Oct 2026.",
+      "rate": 6.15,
+      "type": "intro"
+    },
+    {
+      "after": null,
+      "bank": "Bankwest Easy Saver",
+      "cap": 250000,
+      "conditions": "New accounts only.",
+      "group": "CBA",
+      "months": 4,
+      "newOnly": true,
+      "note": "Bankwest is part of CBA: shares CBA's guarantee cap.",
+      "rate": 6,
+      "type": "intro"
+    },
+    {
+      "after": null,
+      "bank": "MyState Hello Saver",
+      "cap": 500000,
+      "conditions": "No deposit or withdrawal conditions. New accounts only.",
+      "group": "MyState",
+      "months": 4,
+      "newOnly": true,
+      "rate": 5.65,
+      "type": "intro"
+    },
+    {
+      "after": null,
+      "bank": "St.George / Bank of Melbourne / BankSA Maxi Saver",
+      "cap": null,
+      "conditions": "No deposit or withdrawal conditions. New accounts only.",
+      "group": "Westpac",
+      "months": 6,
+      "newOnly": true,
+      "note": "All three are Westpac brands: one guarantee cap between them.",
+      "rate": 5.6,
+      "type": "intro"
+    },
+    {
+      "after": null,
+      "bank": "IMB Reward Saver",
+      "cap": 1000000,
+      "conditions": "Deposit $50+ and make no withdrawals each month.",
+      "group": "IMB",
+      "months": 4,
+      "newOnly": true,
+      "rate": 5.6,
+      "type": "intro"
+    },
+    {
+      "after": null,
+      "bank": "CommBank NetBank Saver",
+      "cap": null,
+      "conditions": "No conditions. New accounts, first 5 months.",
+      "group": "CBA",
+      "months": 5,
+      "newOnly": true,
+      "rate": 5.5,
+      "type": "intro"
+    },
+    {
+      "after": null,
+      "bank": "NAB iSaver",
+      "cap": null,
+      "conditions": "Intro for new accounts.",
+      "group": "NAB",
+      "months": 4,
+      "newOnly": true,
+      "rate": 5.5,
+      "type": "intro"
+    },
+    {
+      "after": null,
+      "bank": "Judo Bank Savings",
+      "cap": 250000,
+      "conditions": "Deposit $300+ each month.",
+      "group": "Judo",
+      "months": null,
+      "newOnly": false,
+      "rate": 5.6,
+      "type": "ongoing"
+    },
+    {
+      "after": null,
+      "bank": "AMP GO Save",
+      "cap": 500000,
+      "conditions": "No conditions, balances up to $500k.",
+      "group": "AMP",
+      "months": null,
+      "newOnly": false,
+      "rate": 5.5,
+      "type": "ongoing"
+    },
+    {
+      "after": null,
+      "bank": "Easy Street Flex Saver",
+      "cap": null,
+      "conditions": "No conditions.",
+      "group": "Easy Street",
+      "months": null,
+      "newOnly": false,
+      "rate": 5.3,
+      "type": "ongoing"
+    },
+    {
+      "after": null,
+      "bank": "Macquarie Savings",
+      "cap": 250000,
+      "conditions": "No conditions. 5.25% applies to balances up to $250k; higher brackets earn less.",
+      "group": "Macquarie",
+      "months": null,
+      "newOnly": false,
+      "note": "New rate from 15 Oct 2026.",
+      "rate": 5.25,
+      "type": "ongoing"
+    },
+    {
+      "after": null,
+      "bank": "ING Savings Accelerator",
+      "cap": 2000000,
+      "conditions": "No conditions, up to $2m.",
+      "group": "ING",
+      "months": null,
+      "newOnly": false,
+      "rate": 5.05,
+      "type": "ongoing"
+    }
+  ],
+  "sourceName": "Finder rate-rise tracker, bank announcements",
+  "sourceUrl": "https://www.finder.com.au/rba-cash-rate/sept-2026-savings-account-cash-rate-increase",
+  "verifiedAt": "2026-10-14"
+}

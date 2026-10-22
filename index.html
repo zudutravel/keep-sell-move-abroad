@@ -1,0 +1,981 @@
+<!doctype html>
+<html lang="en-AU">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>Keep or Sell Planner</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Public+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+/* Layout: a working tool. Sticky verdict strip on top, tabbed panels below, Keep (harbour blue) vs Sell (jade) carried through every chart and table. */
+:root{
+  --bg:#F2F5F3; --surface:#FFFFFF; --surface-2:#E8EEEA; --ink:#15201B; --muted:#5A6862; --line:#D3DCD6;
+  --keep:#2C5C8C; --keep-soft:#DCE7F2; --sell:#13836A; --sell-soft:#D7EEE7; --gold:#A87A1E;
+  --good:#1D7A4C; --warn:#A86300; --bad:#B3261E;
+  --f-display:"Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --f-body:"Public Sans", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --f-num:"IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#0E1412; --surface:#16201C; --surface-2:#1D2924; --ink:#E5ECE8; --muted:#98A69F; --line:#2B3833;
+  --keep:#86AEDB; --keep-soft:#1D2C3C; --sell:#52C7A3; --sell-soft:#173229; --gold:#DDB257;
+  --good:#5CCB8F; --warn:#E9A43E; --bad:#F27C70; color-scheme:dark }}
+:root[data-theme="dark"]{
+  --bg:#0E1412; --surface:#16201C; --surface-2:#1D2924; --ink:#E5ECE8; --muted:#98A69F; --line:#2B3833;
+  --keep:#86AEDB; --keep-soft:#1D2C3C; --sell:#52C7A3; --sell-soft:#173229; --gold:#DDB257;
+  --good:#5CCB8F; --warn:#E9A43E; --bad:#F27C70; color-scheme:dark }
+
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.5;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1120px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+h1,h2,h3{font-family:var(--f-display);text-wrap:balance;margin:0;letter-spacing:-.01em}
+h1{font-size:clamp(1.6rem,4vw,2.3rem);font-weight:700;line-height:1.1}
+h2{font-size:1.25rem;font-weight:700}
+h3{font-size:1rem;font-weight:600}
+p{margin:0}
+.num{font-family:var(--f-num);font-variant-numeric:tabular-nums;font-weight:500}
+.muted{color:var(--muted)}
+.small{font-size:.82rem}
+.eyebrow{font-size:.72rem;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);font-weight:600}
+a{color:var(--keep)}
+button{font:inherit;cursor:pointer}
+:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+
+/* header */
+header.top{padding-block:22px 14px;display:grid;gap:14px}
+.title-row{display:flex;flex-wrap:wrap;gap:12px 24px;align-items:end;justify-content:space-between}
+.title-row p{max-width:58ch;color:var(--muted);margin-top:6px}
+.controls{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.seg{display:inline-flex;background:var(--surface-2);border-radius:999px;padding:3px;gap:2px}
+.seg button{border:0;background:transparent;color:var(--muted);padding:6px 12px;border-radius:999px;font-size:.85rem;font-weight:600}
+.seg button[aria-pressed="true"]{background:var(--surface);color:var(--ink);box-shadow:0 1px 2px rgb(0 0 0/.12)}
+.chip{display:inline-flex;align-items:center;gap:6px;font-size:.78rem;font-weight:600;padding:3px 9px;border-radius:999px;background:var(--surface-2);color:var(--muted)}
+.chip.good{color:var(--good)} .chip.warn{color:var(--warn)} .chip.bad{color:var(--bad)}
+.dot{width:7px;height:7px;border-radius:50%;background:currentColor}
+
+/* verdict strip */
+.verdict{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);border-bottom:1px solid var(--line)}
+.verdict .wrap{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1px;padding-block:10px}
+.vcell{padding:4px 12px;border-left:3px solid transparent;min-width:0}
+.vcell.keep{border-color:var(--keep)} .vcell.sell{border-color:var(--sell)}
+.vcell .v{font-family:var(--f-num);font-size:clamp(1rem,2.6vw,1.35rem);font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.vcell .l{font-size:.74rem;color:var(--muted);line-height:1.25}
+@media (max-width:640px){.verdict .wrap{grid-template-columns:repeat(2,minmax(0,1fr));row-gap:8px}}
+
+/* tabs */
+nav.tabs{display:flex;gap:4px;overflow-x:auto;padding-block:14px 4px;scrollbar-width:none}
+nav.tabs::-webkit-scrollbar{display:none}
+nav.tabs button{flex:none;border:1px solid var(--line);background:var(--surface);color:var(--muted);padding:8px 14px;border-radius:10px;font-weight:600;font-size:.88rem}
+nav.tabs button[aria-selected="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+main{padding-block:10px 60px}
+section.panel{display:grid;gap:18px}
+
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:18px;min-width:0}
+.card > header{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}
+.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px}
+@media (max-width:860px){.grid2,.grid3{grid-template-columns:minmax(0,1fr)}}
+
+/* fields */
+.fields{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:12px 16px}
+.field{display:grid;gap:4px;min-width:0}
+.field label{font-size:.8rem;font-weight:600;color:var(--muted)}
+.field .hint{font-size:.72rem;color:var(--muted)}
+.inp{display:flex;align-items:center;border:1px solid var(--line);border-radius:9px;background:var(--bg);overflow:hidden}
+.inp:focus-within{border-color:var(--keep)}
+.inp span{padding:0 9px;color:var(--muted);font-size:.82rem;white-space:nowrap}
+.inp input,.inp select{flex:1;min-width:0;border:0;background:transparent;color:var(--ink);font-family:var(--f-num);font-size:.92rem;padding:8px 9px;outline:none}
+.inp select{font-family:var(--f-body)}
+input[type=text].plain{font-family:var(--f-body)}
+.group-title{grid-column:1/-1;margin-top:6px;font-size:.72rem;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);font-weight:600;border-top:1px solid var(--line);padding-top:12px}
+.group-title:first-child{border-top:0;padding-top:0;margin-top:0}
+
+/* tables */
+.tbl-wrap{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:.9rem}
+th,td{padding:8px 10px;text-align:right;border-bottom:1px solid var(--line);white-space:nowrap}
+th:first-child,td:first-child{text-align:left;white-space:normal}
+thead th{font-size:.72rem;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);font-weight:600}
+th.k,td.k{color:var(--keep)} th.s,td.s{color:var(--sell)}
+tr.total td{font-weight:700;border-bottom:0;border-top:2px solid var(--ink)}
+td.neg{color:var(--bad)}
+tr.sub td{color:var(--muted);font-size:.84rem}
+
+.chart-box{position:relative;height:300px}
+.chart-box.tall{height:340px}
+.legend{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:.8rem;color:var(--muted);margin-top:8px}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px;vertical-align:-1px}
+
+.callout{border-radius:12px;padding:14px 16px;background:var(--surface-2);font-size:.9rem;display:grid;gap:6px}
+.callout.warn{background:color-mix(in srgb,var(--warn) 13%,var(--surface))}
+.callout.bad{background:color-mix(in srgb,var(--bad) 12%,var(--surface))}
+.callout.good{background:color-mix(in srgb,var(--good) 12%,var(--surface))}
+.callout strong{font-weight:600}
+
+/* list rows */
+.rows{display:grid;gap:8px}
+.row{display:grid;grid-template-columns:minmax(0,1fr) 150px 32px;gap:8px;align-items:center}
+.row .amt-aud{font-size:.75rem;color:var(--muted);text-align:right}
+.icon-btn{border:1px solid var(--line);background:var(--surface);color:var(--muted);width:32px;height:34px;border-radius:8px;font-size:1rem;line-height:1}
+.icon-btn:hover{color:var(--bad);border-color:var(--bad)}
+.btn{border:1px solid var(--line);background:var(--surface);color:var(--ink);padding:8px 14px;border-radius:9px;font-weight:600;font-size:.86rem}
+.btn.primary{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.btn.danger{color:var(--bad)}
+.btn-row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+
+/* ladder */
+.acct{display:grid;gap:10px;border:1px solid var(--line);border-radius:12px;padding:14px;background:var(--bg)}
+.acct-fields{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px}
+.bar{height:8px;background:var(--surface-2);border-radius:99px;overflow:hidden}
+.bar > i{display:block;height:100%;background:var(--gold);border-radius:99px}
+.fcs{display:grid;gap:10px}
+.fcs-row{display:grid;grid-template-columns:110px minmax(0,1fr) 110px;gap:10px;align-items:center;font-size:.86rem}
+.fcs-track{position:relative;height:16px;background:var(--surface-2);border-radius:6px;overflow:hidden}
+.fcs-track i{position:absolute;left:0;top:0;bottom:0;background:var(--sell);border-radius:6px}
+.fcs-track i.over{background:var(--bad)}
+
+/* offers */
+.offers{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px}
+.offer{border:1px solid var(--line);border-radius:12px;padding:14px;display:grid;gap:8px;background:var(--surface);align-content:start}
+.offer .rate{font-family:var(--f-num);font-size:1.6rem;line-height:1}
+.offer .then{font-size:.8rem;color:var(--muted)}
+.offer dl{display:grid;grid-template-columns:auto 1fr;gap:3px 10px;margin:0;font-size:.8rem}
+.offer dt{color:var(--muted)} .offer dd{margin:0;text-align:right}
+.offer.used{opacity:.62}
+.offer .cond{font-size:.8rem}
+.tag{font-size:.68rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:2px 7px;border-radius:5px;background:var(--surface-2);color:var(--muted)}
+.tag.intro{color:var(--gold)} .tag.ongoing{color:var(--sell)}
+.empty{border:1px dashed var(--line);border-radius:12px;padding:22px;text-align:center;color:var(--muted)}
+
+.notes{display:grid;gap:14px;max-width:72ch}
+.notes h3{margin-top:8px}
+.notes p,.notes li{font-size:.92rem}
+.notes ul{margin:0;padding-left:20px;display:grid;gap:6px}
+.checknote{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;font-size:.82rem;color:var(--muted)}
+.checknote button{border:0;background:none;color:var(--keep);font-weight:600;padding:0;font-size:inherit;text-decoration:underline}
+.save-state{font-size:.75rem;color:var(--muted)}
+@media (prefers-reduced-motion: reduce){*{transition:none!important;animation:none!important}}
+html{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+body{margin:0}
+[hidden]{display:none!important}
+/* sign-in gate */
+.gate{min-height:100vh;display:grid;place-items:center;padding-block:40px}
+.gate-card{width:100%;max-width:420px;display:grid;gap:16px}
+.gate-card form{display:grid;gap:12px}
+.gate-msg{font-size:.88rem}
+.gate-msg.err{color:var(--bad)} .gate-msg.ok{color:var(--good)}
+.linkish{border:0;background:none;color:var(--keep);padding:0;font-weight:600;text-decoration:underline}
+.acct-bar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;font-size:.8rem;color:var(--muted)}
+.member-row{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:10px;align-items:center;padding:8px 0;border-bottom:1px solid var(--line);font-size:.9rem}
+.member-row .email{overflow-wrap:anywhere}
+footer.disclaimer{padding-block:24px 40px;border-top:1px solid var(--line);font-size:.78rem;color:var(--muted)}
+</style>
+</head>
+<body>
+<div class="gate wrap" id="gate">
+  <div class="gate-card card">
+    <div>
+      <div class="eyebrow">Australian homeowner · moving abroad</div>
+      <h1 style="font-size:1.7rem;margin-top:4px">Keep or Sell Planner</h1>
+      <p class="muted" style="margin-top:6px" id="gateLead">Sign in to open your planner.</p>
+    </div>
+    <form id="authForm" novalidate>
+      <div class="field"><label for="authEmail">Email</label><div class="inp"><input class="plain" id="authEmail" type="email" autocomplete="email" required></div></div>
+      <div class="field"><label for="authPass">Password</label><div class="inp"><input class="plain" id="authPass" type="password" autocomplete="current-password" minlength="8" required></div><span class="hint" id="passHint" hidden>At least 8 characters.</span></div>
+      <button class="btn primary" id="authSubmit" type="submit">Sign in</button>
+      <p class="small muted"><span id="modeText">New here?</span> <button type="button" class="linkish" id="modeToggle">Create your account</button></p>
+      <p class="gate-msg" id="authMsg" role="status"></p>
+    </form>
+    <div id="noAccess" hidden class="callout warn">
+      <strong>Your email isn't on the access list yet.</strong>
+      <span>Signed in as <b id="naEmail"></b>. Once your purchase is confirmed, your email is added and this page opens. Use the same email you paid with.</span>
+      <div class="btn-row" style="margin-top:6px"><a class="btn primary" id="buyLink" href="#" target="_blank" rel="noopener">Get access</a><button class="btn" id="recheck" type="button">I've paid, check again</button><button class="btn" id="naSignOut" type="button">Sign out</button></div>
+    </div>
+    <p class="small muted" id="cfgWarn" hidden>Setup isn't finished: add your Supabase details to config.js.</p>
+  </div>
+</div>
+<div id="app" hidden>
+
+<header class="top wrap">
+  <div class="title-row">
+    <div>
+      <div class="eyebrow">Australian homeowner · moving abroad</div>
+      <h1>Keep the house, or sell it?</h1>
+      <p>Rent it out from overseas, or sell and live off bank interest. Every figure below is editable; the starting numbers are examples until you change them.</p>
+    </div>
+    <div class="controls">
+      <div>
+        <div class="eyebrow" style="margin-bottom:4px">Tax status while away</div>
+        <div class="seg" id="statusSeg" role="group" aria-label="Tax status">
+          <button data-status="foreign" aria-pressed="true">Foreign resident</button>
+          <button data-status="resident" aria-pressed="false">Aus resident</button>
+        </div>
+      </div>
+      <div class="field" style="width:110px">
+        <label for="f_years">Horizon</label>
+        <div class="inp"><input id="f_years" type="number" data-path="years" min="1" max="40" step="1"><span>yrs</span></div>
+      </div>
+    </div>
+  </div>
+  <p class="checknote" id="checkNote" hidden></p>
+  <div class="acct-bar" id="acctBar"><span>Signed in as <b id="whoami"></b></span><button class="linkish" id="signOut" type="button">Sign out</button></div>
+  <p class="chip warn" id="testMode" hidden style="justify-self:start"><span class="dot"></span>Test mode: no sign-in, figures save on this device only</p>
+</header>
+
+<div class="verdict" aria-live="polite">
+  <div class="wrap" id="verdict"></div>
+</div>
+
+<div class="wrap">
+  <nav class="tabs" role="tablist" id="tabs">
+    <button role="tab" data-tab="compare" aria-selected="true">Compare</button>
+    <button role="tab" data-tab="keep">Keep &amp; rent</button>
+    <button role="tab" data-tab="sell">Sell &amp; bank</button>
+    <button role="tab" data-tab="ladder">Bank ladder</button>
+    <button role="tab" data-tab="offers">Bank offers</button>
+    <button role="tab" data-tab="budget">Overseas budget</button>
+    <button role="tab" data-tab="aus">Aus costs</button>
+    <button role="tab" data-tab="rules">Tax rules</button>
+    <button role="tab" data-tab="members" id="membersTab" hidden>Members</button>
+  </nav>
+
+<main>
+  <!-- COMPARE -->
+  <section class="panel" data-panel="compare">
+    <div class="grid2">
+      <div class="card">
+        <header><h2>A typical month, year one</h2><span class="muted small">AUD per month</span></header>
+        <div class="tbl-wrap"><table id="cmpTable"></table></div>
+      </div>
+      <div class="card">
+        <header><h2>Money in vs money out</h2><span class="muted small">AUD per month</span></header>
+        <div class="chart-box"><canvas id="flowChart" aria-label="Monthly money in and out for each scenario"></canvas></div>
+      </div>
+    </div>
+    <div class="card">
+      <header><h2>What you'd walk away with</h2><span class="muted small" id="nwNote"></span></header>
+      <div class="chart-box tall"><canvas id="nwChart" aria-label="Net worth over time for each scenario"></canvas></div>
+      <div class="legend"><span><i style="background:var(--keep)"></i>Keep: house after selling costs and tax, minus loan, plus cash</span><span><i style="background:var(--sell)"></i>Sell: money in the bank</span></div>
+    </div>
+    <div id="insights" class="grid2"></div>
+  </section>
+
+  <!-- KEEP -->
+  <section class="panel" data-panel="keep" hidden>
+    <div class="grid2">
+      <div class="card"><header><h2>The property</h2></header><div class="fields" id="keepFields1"></div></div>
+      <div class="card"><header><h2>Renting it out</h2></header><div class="fields" id="keepFields2"></div></div>
+    </div>
+    <div class="grid2">
+      <div class="card"><header><h2>Owner's costs</h2><span class="muted small">per year</span></header><div class="fields" id="keepFields3"></div></div>
+      <div class="card">
+        <header><h2>Rental result, year one</h2><span class="muted small">AUD per year</span></header>
+        <div class="tbl-wrap"><table id="keepTable"></table></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SELL -->
+  <section class="panel" data-panel="sell" hidden>
+    <div class="grid2">
+      <div class="card"><header><h2>The sale</h2></header><div class="fields" id="sellFields1"></div></div>
+      <div class="card">
+        <header><h2>Cash after settlement</h2></header>
+        <div class="tbl-wrap"><table id="sellTable"></table></div>
+      </div>
+    </div>
+    <div class="grid2">
+      <div class="card"><header><h2>Living off interest</h2></header><div class="fields" id="sellFields2"></div>
+        <div class="callout" style="margin-top:14px" id="rateHelp"></div></div>
+      <div class="card">
+        <header><h2>Interest budget</h2><span class="muted small">AUD per month, year one</span></header>
+        <div class="tbl-wrap"><table id="interestTable"></table></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- LADDER -->
+  <section class="panel" data-panel="ladder" hidden>
+    <div class="grid3" id="ladderTiles"></div>
+    <div class="card">
+      <header><h2>Your accounts</h2><div class="btn-row"><button class="btn" id="addAcct">Add account</button></div></header>
+      <div class="rows" id="ladderRows"></div>
+      <div class="fields" style="margin-top:14px">
+        <div class="field" style="grid-column:1/-1">
+          <label for="usedGroups">Banking groups you've already had an intro rate with</label>
+          <div class="inp"><input id="usedGroups" class="plain" type="text" placeholder="ING, Macquarie"></div>
+          <span class="hint">Comma separated. Intro rates are for new customers, so these are skipped when suggesting your next move.</span>
+        </div>
+      </div>
+    </div>
+    <div class="grid2">
+      <div class="card"><header><h2>Next moves</h2></header><div id="nextMoves" class="rows"></div></div>
+      <div class="card"><header><h2>Government guarantee check</h2><span class="muted small" id="fcsCap"></span></header>
+        <div class="fcs" id="fcsBars"></div>
+        <p class="small muted" style="margin-top:12px">The Financial Claims Scheme covers $250,000 per person per banking licence. Brands that share a licence share one cap.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- OFFERS -->
+  <section class="panel" data-panel="offers" hidden>
+    <div class="card">
+      <header>
+        <div><h2>Current bank offers</h2><p class="small muted" id="offersMeta" style="margin-top:4px"></p></div>
+        <div class="btn-row"><span id="freshChip"></span></div>
+      </header>
+      <div class="btn-row" style="margin:6px 0 14px">
+        <div class="seg" id="offerFilter" role="group" aria-label="Filter offers">
+          <button data-f="all" aria-pressed="true">All</button>
+          <button data-f="intro" aria-pressed="false">Intro rates</button>
+          <button data-f="ongoing" aria-pressed="false">No-hoops fallbacks</button>
+        </div>
+      </div>
+      <div class="offers" id="offerList"></div>
+    </div>
+  </section>
+
+  <!-- BUDGET -->
+  <section class="panel" data-panel="budget" hidden>
+    <div class="card">
+      <header><h2>Where you'll live</h2>
+        <div class="btn-row"><button class="btn" id="addCountry">Add a country</button><button class="btn danger" id="delCountry">Remove this country</button></div></header>
+      <div class="fields" id="countryFields"></div>
+    </div>
+    <div class="grid2">
+      <div class="card"><header><h2>Monthly living costs</h2><span class="muted small" id="budgetCur"></span></header>
+        <div class="rows" id="budgetRows"></div>
+        <div class="btn-row" style="margin-top:12px"><button class="btn" id="addLine">Add a line</button></div></div>
+      <div class="card"><header><h2>Budget shape</h2><span class="num" id="budgetTotal"></span></header>
+        <div class="chart-box"><canvas id="budgetChart" aria-label="Living cost breakdown"></canvas></div>
+        <div class="legend" id="budgetLegend"></div></div>
+    </div>
+  </section>
+
+  <!-- AUS COSTS -->
+  <section class="panel" data-panel="aus" hidden>
+    <div class="grid2">
+      <div class="card"><header><h2>Costs that stay in Australia</h2><span class="muted small">AUD per month, both scenarios</span></header>
+        <div class="rows" id="ausRows"></div>
+        <div class="btn-row" style="margin-top:12px"><button class="btn" id="addAus">Add a line</button></div></div>
+      <div class="card"><header><h2>Shared assumptions</h2></header><div class="fields" id="sharedFields"></div></div>
+    </div>
+  </section>
+
+  <!-- RULES -->
+  <section class="panel" data-panel="rules" hidden>
+    <div class="card notes">
+      <h2>Rules this model is built on</h2>
+      <p class="muted small">General information as at October 2026, not tax or financial advice. Get a registered tax agent to confirm your residency and any sale before you sign.</p>
+      <h3>Interest as a foreign resident</h3>
+      <ul>
+        <li>Once your bank records you as a non-resident with an overseas address, it withholds a flat 10% of interest. That is a final tax: no return needed for it, no deductions against it.</li>
+        <li>As an Australian resident, interest is added to your taxable income and taxed at 15%, 30%, 37% or 45% plus the 2% Medicare levy (2026–27 rates, $18,200 tax-free).</li>
+        <li>Tell each bank about your status change. If it still thinks you're a resident, it won't withhold correctly and you'll owe returns.</li>
+      </ul>
+      <h3>Selling the house</h3>
+      <ul>
+        <li>If you are a foreign resident on the day you sign the sale contract, you lose the main residence exemption entirely, even for the years you lived there. The 50% CGT discount is also lost for the time you were non-resident.</li>
+        <li>Signing while still an Australian resident keeps the exemption. That's the "Exempt" option on the Sell tab.</li>
+        <li>Without an ATO clearance certificate, the buyer withholds 15% of the price at settlement. Residents can get one; foreign residents claim the excess back through a return.</li>
+        <li>The six-year absence rule lets a resident rent the old home and still claim it as their main residence. It does not help if you're a foreign resident when you sell.</li>
+        <li>A narrow life-events test (six years or less away, plus a specific event such as a terminal illness, death or divorce) can restore the exemption for foreign residents.</li>
+      </ul>
+      <h3>Renting it out from overseas</h3>
+      <ul>
+        <li>Foreign residents pay 30% from the first dollar of net rent (no tax-free threshold), 37% above $135,000 and 45% above $190,000. No Medicare levy.</li>
+        <li>Losses from a negatively geared property carry forward and offset future rental profit. This model carries them forward year by year.</li>
+      </ul>
+      <h3>Bank-hopping</h3>
+      <ul>
+        <li>Most top rates are 3 to 6 month intro offers for customers new to that bank. Track the banking group, not just the brand: Ubank sits under NAB; Bankwest under CBA; St.George, Bank of Melbourne and BankSA under Westpac.</li>
+        <li>Check balance caps. Rates often apply only up to $50k, $100k, $250k or $500k, with a lower rate above.</li>
+        <li>Many bonus accounts need monthly balance growth, deposits or no withdrawals. If you live off the interest, draw it from an account without that rule.</li>
+      </ul>
+      <h3>Living in Vietnam</h3>
+      <ul>
+        <li>Spending 183 days or more in Vietnam in a year can make you a Vietnamese tax resident, which in principle brings worldwide income into scope. The Australia–Vietnam tax treaty limits double tax on interest. Worth confirming with a Vietnamese adviser.</li>
+      </ul>
+      <h3>Sources</h3>
+      <ul class="small">
+        <li><a href="https://www.ato.gov.au/individuals-and-families/investments-and-assets/capital-gains-tax/foreign-residents-and-capital-gains-tax/main-residence-exemption-for-foreign-residents" target="_blank" rel="noopener">ATO: main residence exemption for foreign residents</a></li>
+        <li><a href="https://www.finder.com.au/rba-cash-rate/sept-2026-savings-account-cash-rate-increase" target="_blank" rel="noopener">Finder: banks passing on the September 2026 rate rise</a></li>
+        <li><a href="https://www.savings.com.au/news/ing-to-retire-savings-maximiser" target="_blank" rel="noopener">Savings.com.au: ING Savings Booster details (12 Oct 2026)</a></li>
+        <li><a href="https://www.macquarie.com/about/news/2026/macquarie-banks-response-to-the-rba-interest-rate-decision.html" target="_blank" rel="noopener">Macquarie: savings rate to 5.25% from 15 Oct 2026</a></li>
+        <li><a href="https://www.countrytaxcalc.com/tax-guides/australia/tax-rates-2026-27/" target="_blank" rel="noopener">2026–27 resident and foreign resident tax rates</a></li>
+      </ul>
+    </div>
+    <div class="card">
+      <header><h2>Your saved data</h2><span class="save-state" id="saveState"></span></header>
+      <div class="btn-row"><button class="btn danger" id="resetBtn">Reset to example figures</button><span id="resetConfirm" hidden><button class="btn danger" id="resetYes">Yes, reset everything</button> <button class="btn" id="resetNo">Cancel</button></span></div>
+    </div>
+  </section>
+
+  <!-- MEMBERS (admin only) -->
+  <section class="panel" data-panel="members" hidden>
+    <div class="grid2">
+      <div class="card">
+        <header><h2>Give someone access</h2></header>
+        <form id="addMemberForm" class="fields" novalidate>
+          <div class="field" style="grid-column:1/-1"><label for="newEmail">Buyer's email</label><div class="inp"><input class="plain" id="newEmail" type="email" required placeholder="name@example.com"></div></div>
+          <div class="field" style="grid-column:1/-1"><label for="newNote">Note</label><div class="inp"><input class="plain" id="newNote" type="text" placeholder="PayPal 14 Oct, $9"></div></div>
+          <div class="btn-row" style="grid-column:1/-1"><button class="btn primary" type="submit">Add member</button><span class="small" id="memberMsg" role="status"></span></div>
+        </form>
+        <p class="small muted" style="margin-top:12px">They create an account with this email on the sign-in page. Access starts as soon as the email is on this list.</p>
+      </div>
+      <div class="card">
+        <header><h2>Members</h2><span class="muted small" id="memberCount"></span></header>
+        <div id="memberList"><div class="empty">Loading…</div></div>
+        <div class="btn-row" id="removeConfirm" hidden style="margin-top:12px"><span class="small">Remove <b id="removeWho"></b>?</span><button class="btn danger" id="removeYes" type="button">Remove access</button><button class="btn" id="removeNo" type="button">Cancel</button></div>
+      </div>
+    </div>
+  </section>
+</main>
+<footer class="disclaimer wrap">General information only, not financial, tax or legal advice. Rates, rules and tax figures change; confirm with the bank and a registered tax agent before acting. Bank offers are checked regularly but may be out of date.</footer>
+</div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="config.js"></script>
+<script>
+(function(){
+"use strict";
+
+/* ---------- defaults (example figures) ---------- */
+const VN_LINES = [
+  ["Rent, 1-bed near the beach",12000000],["Electricity & water",1500000],["Internet & local SIM",400000],
+  ["Groceries",3000000],["Eating out & coffee",5000000],["Drinks & social",2000000],
+  ["Motorbike rental & fuel",2500000],["Grab & taxis",500000],["Gym",800000],
+  ["Visa & extensions (spread monthly)",1000000],["International health insurance",3500000],
+  ["Cleaner & laundry",600000],["Shopping & misc",2000000],["Flights home (spread monthly)",2500000]
+].map(([name,amt])=>({name,amt}));
+
+const DEF = {
+  v:1, status:"foreign", years:20, ausInfl:3, abroadInfl:3.5, otherSavings:50000,
+  keep:{ value:750000, costBase:450000, yearsOwned:8, loan:250000, loanRate:6.6, loanType:"pi", loanYears:22,
+    rentWk:650, vacancyWk:2, mgmtPct:8.8, lettingWk:1, council:2400, water:900, landlordIns:600, buildingIns:2200,
+    bodyCorp:0, maintenance:2500, landTax:0, compliance:150, taxAgent:500, depreciation:0, growth:5, rentGrowth:3 },
+  sell:{ price:750000, commissionPct:2.2, marketing:3500, legal:1500, discharge:400, cgtMode:"exempt", longRate:5.6, fallbackRate:5.25 },
+  aus:[{name:"Netflix",amt:19},{name:"Phone plan to keep my number",amt:15},{name:"Tax agent (spread monthly)",amt:25},{name:"Other subscriptions",amt:20}],
+  country:"vn",
+  countries:{ vn:{name:"Vietnam",city:"Da Nang",cur:"VND",fx:18400,lines:VN_LINES} },
+  ladder:[
+    {bank:"ING Savings Booster",group:"ING",balance:240000,rate:6.25,introEnd:"2026-12-14",revert:5.65,cond:"Grow balance $100+/month, no withdrawals"},
+    {bank:"Macquarie Savings",group:"Macquarie",balance:200000,rate:5.25,introEnd:"",revert:5.25,cond:"No conditions"}
+  ],
+  usedGroups:"ING, Macquarie",
+  holders:1
+};
+const clone = o=>JSON.parse(JSON.stringify(o));
+let S = clone(DEF);
+let OFFERS = null, offersState = "loading";
+let uid=null;
+let tab = "compare", offerFilter="all";
+
+/* ---------- helpers ---------- */
+const $ = id=>document.getElementById(id);
+const esc = s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const money = (n,dp=0)=>{ if(!isFinite(n)) return "—"; const a=Math.abs(n).toLocaleString("en-AU",{maximumFractionDigits:dp,minimumFractionDigits:dp}); return (n<-0.5?"−$":"$")+a; };
+const short = n=>{ const a=Math.abs(n), sg=n<-0.5?"−":""; if(a>=1e6) return sg+"$"+(a/1e6).toFixed(2)+"m"; if(a>=1e4) return sg+"$"+Math.round(a/1e3)+"k"; return money(n); };
+const pct = n=>(+n).toFixed(2).replace(/\.?0+$/,"")+"%";
+const getP = (o,p)=>p.split(".").reduce((a,k)=>a==null?a:a[k],o);
+const setP = (o,p,v)=>{ const ks=p.split("."); let a=o; for(let i=0;i<ks.length-1;i++) a=a[ks[i]]; a[ks[ks.length-1]]=v; };
+const css = k=>getComputedStyle(document.documentElement).getPropertyValue("--"+k).trim();
+const num = v=>{ const n=parseFloat(v); return isFinite(n)?n:0; };
+function merge(base, src){ if(!src||typeof src!=="object") return base; for(const k in src){ if(base[k]&&typeof base[k]==="object"&&!Array.isArray(base[k])&&src[k]&&typeof src[k]==="object"&&!Array.isArray(src[k])) merge(base[k],src[k]); else if(src[k]!==undefined) base[k]=src[k]; } return base; }
+
+/* ---------- tax ---------- */
+function foreignTax(x){ if(x<=0) return 0; let t=Math.min(x,135000)*0.30; if(x>135000) t+=(Math.min(x,190000)-135000)*0.37; if(x>190000) t+=(x-190000)*0.45; return t; }
+function residentTax(x){ if(x<=18200) return 0; let t=0; for(const [l,h,r] of [[18200,45000,.15],[45000,135000,.30],[135000,190000,.37],[190000,Infinity,.45]]) if(x>l) t+=(Math.min(x,h)-l)*r; if(x>28011) t+=x*0.02; return t; }
+const incomeTax = x=> S.status==="foreign"?foreignTax(x):residentTax(x);
+
+/* ---------- money in budgets ---------- */
+const C = ()=>S.countries[S.country]||Object.values(S.countries)[0];
+const livingAUD = ()=>{ const c=C(); const fx=num(c.fx)||1; return c.lines.reduce((a,l)=>a+num(l.amt),0)/fx; };
+const ausAUD = ()=>S.aus.reduce((a,l)=>a+num(l.amt),0);
+
+/* ---------- the model ---------- */
+function calc(){
+  const k=S.keep, s=S.sell, Y=Math.max(1,Math.min(40,Math.round(num(S.years))||20));
+  const infl=num(S.ausInfl)/100, ab=num(S.abroadInfl)/100, rate=num(s.longRate)/100;
+  const sellCosts = v=> v*num(s.commissionPct)/100 + num(s.marketing) + num(s.legal);
+  const latentCGT = (v,y)=>{ const gain=v-sellCosts(v)-num(k.costBase); if(gain<=0) return 0;
+    if(S.status==="foreign") return foreignTax(gain);
+    if(y<=6) return 0; const share=(y-6)/(y+num(k.yearsOwned)); return residentTax(gain*share*0.5); };
+  const living0=livingAUD()*12, aus0=ausAUD()*12;
+
+  // mortgage
+  const r=num(k.loanRate)/100/12, n=Math.max(1,num(k.loanYears)*12);
+  const pmt = num(k.loan)<=0?0:(k.loanType==="io"? num(k.loan)*r : (r===0? num(k.loan)/n : num(k.loan)*r/(1-Math.pow(1+r,-n))));
+
+  // KEEP
+  let bal=num(k.loan), val=num(k.value), sav=num(S.otherSavings), lossCF=0, months=0;
+  const keepNW=[val-bal-sellCosts(val)-latentCGT(val,0)+sav], keepRows=[];
+  for(let y=1;y<=Y;y++){
+    const gi=Math.pow(1+num(k.rentGrowth)/100,y-1), ci=Math.pow(1+infl,y-1), li=Math.pow(1+ab,y-1);
+    const rent=num(k.rentWk)*Math.max(0,52-num(k.vacancyWk))*gi;
+    const mgmt=rent*num(k.mgmtPct)/100 + num(k.lettingWk)*num(k.rentWk)*gi*1.1;
+    const fixed=(num(k.council)+num(k.water)+num(k.landlordIns)+num(k.buildingIns)+num(k.bodyCorp)+num(k.maintenance)+num(k.landTax)+num(k.compliance)+num(k.taxAgent))*ci;
+    let int=0, pay=0;
+    for(let m=0;m<12;m++){ if(bal<=0.5) break; const i=bal*r; let p;
+      p = k.loanType==="io" ? i : Math.min(pmt,bal+i);
+      int+=i; bal-= (p-i); pay+=p; months++; }
+    if(bal<0) bal=0;
+    const savInt=Math.max(0,sav)*rate;
+    let net=rent-mgmt-fixed-int-num(k.depreciation), tax=0, rentTax=0, intTax=0;
+    if(S.status==="foreign"){
+      if(net<0){ lossCF+=-net; } else { const use=Math.min(lossCF,net); net-=use; lossCF-=use; rentTax=foreignTax(net); }
+      intTax=savInt*0.10;
+    } else {
+      let tot=net+savInt;
+      if(tot<0){ lossCF+=-tot; tot=0; } else { const use=Math.min(lossCF,tot); tot-=use; lossCF-=use; }
+      rentTax=residentTax(tot);
+    }
+    tax=rentTax+intTax;
+    const living=living0*li, aus=aus0*ci;
+    const cash=rent-mgmt-fixed-pay-tax+savInt-aus-living;
+    keepRows.push({rent,mgmt,fixed,int,pay,tax,savInt,aus,living,cash,taxable:rent-mgmt-fixed-int-num(k.depreciation)});
+    sav+=cash; val*=1+num(k.growth)/100;
+    keepNW.push(val-bal-sellCosts(val)-latentCGT(val,y)+sav);
+  }
+  const keepEnd={val,bal,sav,cgt:latentCGT(val,Y),sellC:sellCosts(val)};
+
+  // SELL
+  const price=num(s.price), sc=sellCosts(price);
+  const gain=Math.max(0,price-sc-num(k.costBase));
+  const cgt0 = s.cgtMode==="exempt"?0:foreignTax(gain);
+  const payout=num(k.loan)+num(s.discharge);
+  const netSale=price-sc-payout-cgt0;
+  let pool=netSale+num(S.otherSavings);
+  const start=pool, sellNW=[pool], sellRows=[];
+  for(let y=1;y<=Y;y++){
+    const ci=Math.pow(1+infl,y-1), li=Math.pow(1+ab,y-1);
+    const int=Math.max(0,pool)*rate;
+    const tax= S.status==="foreign"? int*0.10 : residentTax(int);
+    const living=living0*li, aus=aus0*ci;
+    const cash=int-tax-aus-living;
+    sellRows.push({int,tax,aus,living,cash});
+    pool+=cash; sellNW.push(pool);
+  }
+  const wht = S.status==="foreign"?0.10:(residentTax(start*rate)/(start*rate||1));
+  const sustainNominal=(start*rate*(1-wht)-aus0)/12;
+  const sustainReal=(start*rate*(1-wht)-start*ab-aus0)/12;
+  // crossover
+  let cross=null; for(let y=1;y<=Y;y++){ if((keepNW[y]>sellNW[y])!==(keepNW[0]>sellNW[0])){ cross=y; break; } }
+  // keep runs out?
+  let keepNeg=null; let sv=num(S.otherSavings); for(let y=0;y<Y;y++){ sv+=keepRows[y].cash; if(sv<0&&keepNeg===null) keepNeg=y+1; }
+  let sellNeg=null; for(let y=1;y<=Y;y++) if(sellNW[y]<0&&sellNeg===null) sellNeg=y;
+  return {Y,keepRows,sellRows,keepNW,sellNW,keepEnd,price,sc,gain,cgt0,payout,netSale,start,sustainNominal,sustainReal,cross,keepNeg,sellNeg,pmt,living0,aus0,lossCF};
+}
+
+/* ---------- field definitions ---------- */
+const F = {
+  keepFields1:[
+    ["keep.value","Current value","$",1000],["keep.costBase","What you paid, plus buying costs","$",1000,"Your CGT cost base"],
+    ["keep.yearsOwned","Years owned so far","yrs",1],["keep.growth","Property growth","%/yr",0.1],
+    ["#Mortgage"],["keep.loan","Loan balance","$",1000],["keep.loanRate","Interest rate","%",0.01],
+    ["keep.loanType","Repayment type","sel",[["pi","Principal & interest"],["io","Interest only"]]],["keep.loanYears","Years left on loan","yrs",1]
+  ],
+  keepFields2:[
+    ["keep.rentWk","Weekly rent","$/wk",5],["keep.vacancyWk","Vacant weeks a year","wks",1],
+    ["keep.rentGrowth","Rent growth","%/yr",0.1],["keep.mgmtPct","Agent management fee, inc GST","%",0.1],
+    ["keep.lettingWk","Letting fee","wks rent",0.5,"Charged when a new tenant signs"],["keep.depreciation","Depreciation claim","$/yr",100,"From a quantity surveyor report"]
+  ],
+  keepFields3:[
+    ["keep.council","Council rates","$",50],["keep.water","Water service charges","$",50,"Tenant usually pays usage"],
+    ["keep.landlordIns","Landlord insurance","$",50],["keep.buildingIns","Building insurance","$",50],
+    ["keep.bodyCorp","Body corporate / strata","$",100,"Zero for a house"],["keep.maintenance","Maintenance & repairs","$",100],
+    ["keep.landTax","Land tax","$",100],["keep.compliance","Smoke alarm & compliance","$",25],["keep.taxAgent","Tax agent for rental return","$",50]
+  ],
+  sellFields1:[
+    ["sell.price","Expected sale price","$",1000],["sell.commissionPct","Agent commission, inc GST","%",0.1],
+    ["sell.marketing","Marketing & styling","$",100],["sell.legal","Conveyancing","$",100],["sell.discharge","Mortgage discharge fee","$",50],
+    ["sell.cgtMode","Capital gains tax","sel",[["exempt","Exempt: I sign the contract while an Aus resident"],["foreign","Taxable: I sign as a foreign resident"]]]
+  ],
+  sellFields2:[
+    ["sell.longRate","Average rate you'll earn","%",0.05,"Blend of intro-rate hopping and fallback"],
+    ["sell.fallbackRate","Fallback account rate","%",0.05,"No-conditions account, e.g. Macquarie"],
+    ["holders","People on the accounts","",1,"Sets the $250k guarantee cap per bank"]
+  ],
+  sharedFields:[
+    ["otherSavings","Other cash savings (both scenarios)","$",1000],["ausInfl","Australian inflation","%/yr",0.1],
+    ["abroadInfl","Living cost inflation abroad","%/yr",0.1,"In AUD terms"]
+  ]
+};
+function fieldHTML(d){
+  if(d[0].startsWith("#")) return `<div class="group-title">${esc(d[0].slice(1))}</div>`;
+  const [path,label,unit,step,hint]=d, id="f_"+path.replace(/\./g,"_");
+  let ctl;
+  if(unit==="sel") ctl=`<select id="${id}" data-path="${path}">${step.map(([v,t])=>`<option value="${v}">${esc(t)}</option>`).join("")}</select>`;
+  else { const pre=unit==="$"?"<span>$</span>":"", post=unit&&unit!=="$"?`<span>${esc(unit)}</span>`:"";
+    ctl=`${pre}<input id="${id}" type="number" inputmode="decimal" data-path="${path}" step="${step}">${post}`; }
+  return `<div class="field"><label for="${id}">${esc(label)}</label><div class="inp">${ctl}</div>${hint?`<span class="hint">${esc(hint)}</span>`:""}</div>`;
+}
+function buildFields(){ for(const box in F) $(box).innerHTML=F[box].map(fieldHTML).join(""); }
+function fillFields(){ document.querySelectorAll("[data-path]").forEach(el=>{ const v=getP(S,el.dataset.path); if(document.activeElement!==el) el.value=v??""; });
+  document.querySelectorAll("#statusSeg button").forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.status===S.status))); }
+
+/* ---------- lists ---------- */
+function rowsHTML(list, kind, unitLabel, fx){
+  return list.map((l,i)=>`<div class="row"><div class="inp"><input class="plain" type="text" aria-label="Item" data-list="${kind}" data-i="${i}" data-k="name" value="${esc(l.name)}"></div>
+    <div><div class="inp"><input type="number" inputmode="decimal" aria-label="Amount" data-list="${kind}" data-i="${i}" data-k="amt" value="${esc(l.amt)}" step="${kind==="budget"?50000:1}"><span>${esc(unitLabel)}</span></div>
+    ${fx?`<div class="amt-aud" data-aud="${i}">${money(num(l.amt)/fx)}</div>`:""}</div>
+    <button class="icon-btn" aria-label="Remove ${esc(l.name)}" data-del="${kind}" data-i="${i}">×</button></div>`).join("");
+}
+function renderLists(){
+  $("ausRows").innerHTML=rowsHTML(S.aus,"aus","/mo");
+  const c=C();
+  $("budgetRows").innerHTML=rowsHTML(c.lines,"budget",c.cur,num(c.fx)||1);
+  $("budgetCur").textContent=`${c.cur} per month · ${num(c.fx).toLocaleString("en-AU")} ${c.cur} = A$1`;
+  $("countryFields").innerHTML=`
+    <div class="field"><label for="cSel">Country</label><div class="inp"><select id="cSel">${Object.entries(S.countries).map(([k,v])=>`<option value="${esc(k)}"${k===S.country?" selected":""}>${esc(v.name)}</option>`).join("")}</select></div></div>
+    <div class="field"><label for="cName">Country name</label><div class="inp"><input class="plain" type="text" id="cName" data-c="name" value="${esc(c.name)}"></div></div>
+    <div class="field"><label for="cCity">City</label><div class="inp"><input class="plain" type="text" id="cCity" data-c="city" value="${esc(c.city)}"></div></div>
+    <div class="field"><label for="cCur">Currency code</label><div class="inp"><input class="plain" type="text" id="cCur" data-c="cur" value="${esc(c.cur)}" maxlength="4"></div></div>
+    <div class="field"><label for="cFx">Exchange rate</label><div class="inp"><input type="number" id="cFx" data-c="fx" step="any" value="${esc(c.fx)}"><span>per A$1</span></div><span class="hint">Update when the rate moves</span></div>`;
+  $("delCountry").hidden=Object.keys(S.countries).length<2;
+  $("usedGroups").value=S.usedGroups||"";
+  renderLadderRows();
+}
+function renderLadderRows(){
+  $("ladderRows").innerHTML = S.ladder.length? S.ladder.map((a,i)=>`<div class="acct">
+    <div class="acct-fields">
+      <div class="field" style="grid-column:span 2"><label for="lb${i}">Account</label><div class="inp"><input class="plain" id="lb${i}" type="text" data-lad="${i}" data-k="bank" value="${esc(a.bank)}"></div></div>
+      <div class="field"><label for="lg${i}">Banking group</label><div class="inp"><input class="plain" id="lg${i}" type="text" data-lad="${i}" data-k="group" value="${esc(a.group)}"></div></div>
+      <div class="field"><label for="lbal${i}">Balance</label><div class="inp"><span>$</span><input id="lbal${i}" type="number" step="1000" data-lad="${i}" data-k="balance" value="${esc(a.balance)}"></div></div>
+      <div class="field"><label for="lr${i}">Rate now</label><div class="inp"><input id="lr${i}" type="number" step="0.01" data-lad="${i}" data-k="rate" value="${esc(a.rate)}"><span>%</span></div></div>
+      <div class="field"><label for="le${i}">Intro ends</label><div class="inp"><input id="le${i}" type="date" data-lad="${i}" data-k="introEnd" value="${esc(a.introEnd)}"></div></div>
+      <div class="field"><label for="lv${i}">Rate after</label><div class="inp"><input id="lv${i}" type="number" step="0.01" data-lad="${i}" data-k="revert" value="${esc(a.revert)}"><span>%</span></div></div>
+      <div class="field" style="grid-column:1/-1"><label for="lc${i}">Conditions</label><div class="inp"><input class="plain" id="lc${i}" type="text" data-lad="${i}" data-k="cond" value="${esc(a.cond)}"></div></div>
+    </div>
+    <div class="btn-row" style="justify-content:space-between"><span class="small muted" data-ladinfo="${i}"></span><button class="btn danger" data-dellad="${i}">Remove</button></div>
+  </div>`).join("") : `<div class="empty">No accounts yet. Add the accounts your money sits in to track intro expiry dates and the guarantee cap.</div>`;
+}
+
+/* ---------- outputs ---------- */
+const today=()=>{ const d=new Date(); d.setHours(0,0,0,0); return d; };
+const daysTo = s=>{ if(!s) return null; const d=new Date(s+"T00:00:00"); if(isNaN(d)) return null; return Math.round((d-today())/864e5); };
+function render(){
+  const R=calc(); window.__R=R;
+  const k1=R.keepRows[0], s1=R.sellRows[0], m=x=>x/12;
+  const keepIn=m(k1.rent+k1.savInt), sellIn=m(s1.int);
+  const kSur=m(k1.cash), sSur=m(s1.cash);
+  // verdict
+  $("verdict").innerHTML=`
+    <div class="vcell keep"><div class="l">Keep · left over each month</div><div class="v" style="color:${kSur<0?"var(--bad)":"var(--ink)"}">${money(kSur)}</div></div>
+    <div class="vcell sell"><div class="l">Sell · left over each month</div><div class="v" style="color:${sSur<0?"var(--bad)":"var(--ink)"}">${money(sSur)}</div></div>
+    <div class="vcell keep"><div class="l">Keep · worth in ${R.Y} yrs</div><div class="v">${short(R.keepNW[R.Y])}</div></div>
+    <div class="vcell sell"><div class="l">Sell · worth in ${R.Y} yrs</div><div class="v">${short(R.sellNW[R.Y])}</div></div>`;
+
+  // compare table
+  const line=(lab,a,b,cls="")=>`<tr class="${cls}"><td>${lab}</td><td class="num${a<-0.5?" neg":""}">${a===null?"—":money(a)}</td><td class="num${b<-0.5?" neg":""}">${b===null?"—":money(b)}</td></tr>`;
+  $("cmpTable").innerHTML=`<thead><tr><th></th><th class="k">Keep</th><th class="s">Sell</th></tr></thead><tbody>
+    ${line("Rent received",m(k1.rent),null)}
+    ${line("Bank interest",m(k1.savInt),m(s1.int))}
+    ${line("Agent fees & property costs",-m(k1.mgmt+k1.fixed),null)}
+    ${line("Mortgage repayments",-m(k1.pay),null)}
+    ${line(S.status==="foreign"?"Tax (rent tax + 10% interest withholding)":"Income tax",-m(k1.tax),-m(s1.tax))}
+    ${line("Costs kept in Australia",-m(k1.aus),-m(s1.aus))}
+    ${line(`Living in ${esc(C().city||C().name)}`,-m(k1.living),-m(s1.living))}
+    ${line("Left over",kSur,sSur,"total")}</tbody>`;
+  $("nwNote").textContent=S.status==="foreign"?"Keep value is after selling costs and CGT as a foreign resident":"Keep value is after selling costs and estimated CGT";
+
+  // insights
+  const ins=[];
+  const diff=R.sellNW[R.Y]-R.keepNW[R.Y];
+  ins.push(`<div class="callout ${diff>0?"good":""}"><strong>${diff>0?"Selling":"Keeping"} comes out ${short(Math.abs(diff))} ahead after ${R.Y} years.</strong>
+    <span>${R.cross?`The lines cross in year ${R.cross}${R.keepNW[0]<R.sellNW[0]?", after which keeping pulls ahead":", after which selling pulls ahead"}.`:"The lead holds for the whole period."} Property growth is set at ${pct(S.keep.growth)} a year and your average bank rate at ${pct(S.sell.longRate)}; small changes to either move this a lot.</span></div>`);
+  ins.push(`<div class="callout"><strong>Selling supports about ${money(R.sustainNominal)} a month of overseas living without touching the capital.</strong>
+    <span>To also keep the capital growing with ${pct(S.abroadInfl)} inflation, spend no more than ${money(R.sustainReal)}. Your budget is ${money(livingAUD())}.</span></div>`);
+  if(R.keepNeg) ins.push(`<div class="callout bad"><strong>Keeping runs your cash below zero in year ${R.keepNeg}.</strong><span>Rent after costs, mortgage and tax doesn't cover living abroad, so savings drain. You'd need to sell, cut spending, or have other income.</span></div>`);
+  if(R.sellNeg) ins.push(`<div class="callout bad"><strong>The sale money runs out in year ${R.sellNeg}.</strong><span>Spending is higher than the interest can support.</span></div>`);
+  if(S.status==="foreign"&&S.sell.cgtMode==="exempt") ins.push(`<div class="callout warn"><strong>The "exempt" sale assumes you sign while still an Australian tax resident.</strong><span>Sign as a foreign resident and the tax bill on this sale would be about ${money(foreignTax(R.gain))}.</span></div>`);
+  if(S.status==="foreign") ins.push(`<div class="callout warn"><strong>Keeping as a foreign resident carries a CGT bill of about ${short(R.keepEnd.cgt)} by year ${R.Y}.</strong><span>Foreign residents lose the main residence exemption when they sell, including for the years they lived there.</span></div>`);
+  $("insights").innerHTML=ins.join("");
+
+  // keep table
+  const yl=(lab,v,cls="")=>`<tr class="${cls}"><td>${lab}</td><td class="num${v<-0.5?" neg":""}">${money(v)}</td></tr>`;
+  $("keepTable").innerHTML=`<tbody>${yl("Rent after vacancy",k1.rent)}${yl("Agent & letting fees",-k1.mgmt)}${yl("Rates, insurance, upkeep",-k1.fixed)}
+    ${yl("Loan interest (deductible)",-k1.int)}${yl("Depreciation",-num(S.keep.depreciation))}${yl("Taxable rental result",k1.taxable,"total")}
+    ${yl(k1.taxable<0?"Loss carried forward":"Tax on rent",k1.taxable<0?0:-(k1.tax-(S.status==="foreign"?k1.savInt*0.1:0)))}
+    ${yl("Loan principal repaid",-(k1.pay-k1.int),"sub")}${yl("Cash from the property",k1.rent-k1.mgmt-k1.fixed-k1.pay-(S.status==="foreign"?k1.tax-k1.savInt*0.1:0),"total")}</tbody>`;
+
+  // sell tables
+  $("sellTable").innerHTML=`<tbody>${yl("Sale price",R.price)}${yl("Agent, marketing, conveyancing",-R.sc)}${yl("Mortgage payout",-R.payout)}
+    ${yl(S.sell.cgtMode==="exempt"?"Capital gains tax (exempt)":"Capital gains tax, foreign resident",-R.cgt0)}${yl("Cash from sale",R.netSale,"total")}
+    ${yl("Plus other savings",num(S.otherSavings))}${yl("Money to invest",R.start,"total")}</tbody>`;
+  $("interestTable").innerHTML=`<tbody>${yl(`Interest at ${pct(S.sell.longRate)}`,m(s1.int))}${yl(S.status==="foreign"?"10% withholding tax":"Income tax",-m(s1.tax))}
+    ${yl("Costs kept in Australia",-m(s1.aus))}${yl("Living abroad",-m(s1.living))}${yl("Left over",m(s1.cash),"total")}
+    ${yl("Fallback-only interest, after tax",m(R.start*num(S.sell.fallbackRate)/100*(S.status==="foreign"?0.9:1)),"sub")}</tbody>`;
+  const lad=ladderStats();
+  $("rateHelp").innerHTML=`<strong>Your ladder is earning ${pct(lad.blend.toFixed(2))} today on ${short(lad.total)}.</strong><span>The average rate drives the long-run projection. Intro rates come and go, so set it between your fallback (${pct(S.sell.fallbackRate)}) and today's ladder rate.</span>`;
+
+  renderLadderOut(lad);
+  renderBudgetOut();
+  renderCharts(R);
+}
+
+/* ---------- ladder ---------- */
+function groupsUsed(){ return (S.usedGroups||"").split(",").map(s=>s.trim().toLowerCase()).filter(Boolean); }
+function ladderStats(){
+  const total=S.ladder.reduce((a,x)=>a+num(x.balance),0);
+  const blend= total? S.ladder.reduce((a,x)=>a+num(x.balance)*num(x.rate),0)/total : 0;
+  const by={}; S.ladder.forEach(x=>{ const g=(x.group||x.bank||"?").trim(); by[g]=(by[g]||0)+num(x.balance); });
+  return {total,blend,by};
+}
+function renderLadderOut(L){
+  const wht=S.status==="foreign"?0.10:0;
+  const moGross=L.total*L.blend/100/12;
+  const soon=S.ladder.map(a=>({a,d:daysTo(a.introEnd)})).filter(x=>x.d!==null&&x.d>=0).sort((x,y)=>x.d-y.d)[0];
+  $("ladderTiles").innerHTML=`
+    <div class="card"><div class="eyebrow">Earning now</div><div class="num" style="font-size:1.6rem">${pct(L.blend.toFixed(2))}</div><div class="small muted">blended across ${short(L.total)}</div></div>
+    <div class="card"><div class="eyebrow">Interest a month</div><div class="num" style="font-size:1.6rem">${money(moGross*(1-wht))}</div><div class="small muted">${money(moGross)} before ${S.status==="foreign"?"10% withholding":"tax"}</div></div>
+    <div class="card"><div class="eyebrow">Next intro rate ends</div><div class="num" style="font-size:1.6rem">${soon?soon.d+" days":"—"}</div><div class="small muted">${soon?esc(soon.a.bank)+" drops to "+pct(soon.a.revert):"No intro rates running"}</div></div>`;
+  S.ladder.forEach((a,i)=>{ const el=document.querySelector(`[data-ladinfo="${i}"]`); if(!el) return; const d=daysTo(a.introEnd);
+    const mo=num(a.balance)*num(a.rate)/100/12*(1-wht);
+    el.innerHTML = `${money(mo)}/mo after tax${d===null?"":d<0?` · <span style="color:var(--bad)">intro ended ${-d} days ago</span>`:` · intro ends in ${d} days`}`; });
+  // FCS
+  const cap=250000*Math.max(1,Math.round(num(S.holders))||1);
+  $("fcsCap").textContent=`Cap ${money(cap)} per banking group`;
+  const groups=Object.entries(L.by);
+  $("fcsBars").innerHTML = groups.length? groups.map(([g,v])=>{ const w=Math.min(100,v/Math.max(cap,v)*100), capPos=cap/Math.max(cap,v)*100;
+    return `<div class="fcs-row"><span>${esc(g)}</span><div class="fcs-track"><i class="${v>cap?"over":""}" style="width:${w}%"></i>${v>cap?`<b style="position:absolute;left:${capPos}%;top:0;bottom:0;width:2px;background:var(--ink)"></b>`:""}</div><span class="num" style="text-align:right;color:${v>cap?"var(--bad)":"inherit"}">${short(v)}${v>cap?" · "+short(v-cap)+" over":""}</span></div>`; }).join("") : `<div class="empty">Add accounts to check the cap.</div>`;
+  // next moves
+  const moves=[]; const used=groupsUsed(); const held=S.ladder.map(a=>(a.group||"").trim().toLowerCase());
+  const offers=(OFFERS&&OFFERS.offers)||[];
+  const candidates=offers.filter(o=>o.type==="intro"&&!used.includes((o.group||"").toLowerCase())&&!held.includes((o.group||"").toLowerCase())).sort((a,b)=>b.rate-a.rate);
+  S.ladder.forEach(a=>{ const d=daysTo(a.introEnd); if(d===null||d>60) return;
+    const amt=num(a.balance);
+    if(candidates.length){ const o=candidates[0]; const room=Math.min(o.cap||Infinity,cap); const mv=Math.min(amt,room);
+      const gain=mv*(o.rate-num(a.revert))/100/12*(o.months||4)*(1-wht);
+      moves.push(`<div class="callout ${d<=14?"warn":""}"><strong>${d<0?"Overdue":d+" days"}: move ${short(mv)} from ${esc(a.bank)} to ${esc(o.bank)} at ${pct(o.rate)} for ${o.months} months.</strong>
+        <span>About ${money(gain)} more after tax than staying at ${pct(a.revert)}. ${esc(o.conditions||"")}${amt>mv?` The remaining ${short(amt-mv)} needs a second home; next best is ${candidates[1]?esc(candidates[1].bank)+" at "+pct(candidates[1].rate):"your fallback account"}.`:""}</span></div>`);
+    } else moves.push(`<div class="callout ${d<=14?"warn":""}"><strong>${esc(a.bank)} intro ends in ${d} days.</strong><span>No unused intro offers on file. Refresh the offers or move it to your fallback.</span></div>`);
+  });
+  if(!moves.length) moves.push(`<div class="callout">Nothing due in the next 60 days.${candidates[0]?` Best unused intro offer right now: <strong>${esc(candidates[0].bank)} at ${pct(candidates[0].rate)}</strong> for ${candidates[0].months} months.`:""}</div>`);
+  if(!OFFERS) moves.push(`<p class="small muted">Bank offers haven't loaded, so suggestions are limited.</p>`);
+  $("nextMoves").innerHTML=moves.join("");
+}
+
+/* ---------- offers ---------- */
+function fmtDate(s){ if(!s) return ""; const d=new Date(s.length<=10?s+"T00:00:00":s); if(isNaN(d)) return esc(s); return d.toLocaleDateString("en-AU",{weekday:"short",day:"numeric",month:"short",year:"numeric"}); }
+function renderCheckNote(){
+  const el=$("checkNote"); if(!OFFERS){ el.hidden=true; return; }
+  const last=OFFERS.checkedAt||OFFERS.verifiedAt, d=daysTo((last||"").slice(0,10)), age=d===null?null:-d;
+  const cls=age===null?"":age<=14?"good":age<=21?"warn":"bad";
+  el.hidden=false;
+  el.innerHTML=`<span class="chip ${cls}"><span class="dot"></span>Bank offers checked ${fmtDate(last)}</span>`+
+    (OFFERS.checkNote?`<span>${esc(OFFERS.checkNote)}</span>`:"")+
+    (OFFERS.nextCheck?`<span>Next check ${fmtDate(OFFERS.nextCheck)}</span>`:"")+
+    `<button type="button" data-tab="offers">See offers</button>`;
+}
+function renderOffers(){
+  renderCheckNote();
+  const list=$("offerList"), meta=$("offersMeta"), chip=$("freshChip");
+  if(!OFFERS){ list.innerHTML=`<div class="empty">${offersState==="none"?"Bank offers couldn't load. Check your connection and reload the page.":"Loading offers…"}</div>`; meta.textContent=""; chip.innerHTML=""; return; }
+  const lastC=(OFFERS.checkedAt||OFFERS.verifiedAt||"").slice(0,10);
+  const d=daysTo(lastC); const age=d===null?null:-d;
+  chip.innerHTML= age===null?"":`<span class="chip ${age<=14?"good":age<=21?"warn":"bad"}"><span class="dot"></span>${age===0?"Checked today":age===1?"Checked yesterday":"Checked "+age+" days ago"}</span>`;
+  meta.innerHTML=`Last checked ${fmtDate(lastC)} · rates last changed ${fmtDate(OFFERS.verifiedAt)}${OFFERS.nextCheck?` · next check ${fmtDate(OFFERS.nextCheck)}`:""} · RBA cash rate ${esc(OFFERS.cashRate||"")} · ${OFFERS.sourceUrl?`<a href="${esc(OFFERS.sourceUrl)}" target="_blank" rel="noopener">${esc(OFFERS.sourceName||"source")}</a>`:""}`;
+  const used=groupsUsed();
+  const items=OFFERS.offers.filter(o=>offerFilter==="all"||o.type===offerFilter).slice().sort((a,b)=>b.rate-a.rate);
+  list.innerHTML=items.map(o=>{ const u=used.includes((o.group||"").toLowerCase());
+    return `<article class="offer${u?" used":""}">
+      <div class="btn-row" style="justify-content:space-between"><span class="tag ${o.type}">${o.type==="intro"?`Intro · ${o.months} mo`:"Ongoing"}</span>${u?`<span class="tag">Used</span>`:""}</div>
+      <h3>${esc(o.bank)}</h3>
+      <div><span class="rate">${pct(o.rate)}</span> <span class="then">${o.type==="intro"&&o.after!=null?`then ${pct(o.after)}`:""}</span></div>
+      <dl><dt>Banking group</dt><dd>${esc(o.group)}</dd><dt>Max balance</dt><dd class="num">${o.cap?short(o.cap):"No cap"}</dd>${o.newOnly?`<dt>Who</dt><dd>New customers</dd>`:""}</dl>
+      <p class="cond">${esc(o.conditions)}</p>${o.note?`<p class="small muted">${esc(o.note)}</p>`:""}
+    </article>`; }).join("")||`<div class="empty">No offers in this filter.</div>`;
+}
+
+/* ---------- budget ---------- */
+function renderBudgetOut(){
+  const c=C(), fx=num(c.fx)||1;
+  const tot=c.lines.reduce((a,l)=>a+num(l.amt),0);
+  $("budgetTotal").textContent=`${tot.toLocaleString("en-AU")} ${c.cur} · ${money(tot/fx)}/mo`;
+  c.lines.forEach((l,i)=>{ const el=document.querySelector(`[data-aud="${i}"]`); if(el) el.textContent=money(num(l.amt)/fx); });
+}
+
+/* ---------- charts ---------- */
+let charts={};
+function palette(){ return {ink:css("ink"),muted:css("muted"),line:css("line"),keep:css("keep"),sell:css("sell"),gold:css("gold"),bad:css("bad"),surface:css("surface"),soft2:css("surface-2")}; }
+function renderCharts(R){
+  if(!window.Chart) return;
+  const P=palette(); Chart.defaults.color=P.muted; Chart.defaults.font.family=getComputedStyle(document.body).fontFamily; Chart.defaults.borderColor=P.line;
+  const k1=R.keepRows[0], s1=R.sellRows[0], m=x=>Math.round(x/12);
+  const flowData={labels:["Keep: in","Keep: out","Sell: in","Sell: out"],datasets:[
+    {label:"Rent",data:[m(k1.rent),0,0,0],backgroundColor:P.keep},
+    {label:"Interest",data:[m(k1.savInt),0,m(s1.int),0],backgroundColor:P.sell},
+    {label:"Property costs",data:[0,m(k1.mgmt+k1.fixed),0,0],backgroundColor:P.muted},
+    {label:"Mortgage",data:[0,m(k1.pay),0,0],backgroundColor:mix(P.keep,0.55)},
+    {label:"Tax",data:[0,m(k1.tax),0,m(s1.tax)],backgroundColor:P.bad},
+    {label:"Aus costs",data:[0,m(k1.aus),0,m(s1.aus)],backgroundColor:P.gold},
+    {label:"Living abroad",data:[0,m(k1.living),0,m(s1.living)],backgroundColor:P.ink}
+  ]};
+  const tip={callbacks:{label:c=>c.raw?`${c.dataset.label}: ${money(c.raw)}`:null}};
+  upsert("flowChart",{type:"bar",data:flowData,options:{responsive:true,maintainAspectRatio:false,animation:false,
+    plugins:{legend:{position:"bottom",labels:{boxWidth:10,boxHeight:10,filter:i=>flowData.datasets[i.datasetIndex].data.some(v=>v>0)}},tooltip:tip},
+    scales:{x:{stacked:true,grid:{display:false}},y:{stacked:true,ticks:{callback:v=>short(v)},grid:{color:P.soft2}}}}});
+  const yrs=[...Array(R.Y+1).keys()];
+  upsert("nwChart",{type:"line",data:{labels:yrs.map(y=>y===0?"Now":"Yr "+y),datasets:[
+    {label:"Keep",data:R.keepNW.map(Math.round),borderColor:P.keep,backgroundColor:mix(P.keep,0.12),fill:true,tension:.25,pointRadius:0,pointHoverRadius:4,borderWidth:2.5},
+    {label:"Sell",data:R.sellNW.map(Math.round),borderColor:P.sell,backgroundColor:mix(P.sell,0.12),fill:true,tension:.25,pointRadius:0,pointHoverRadius:4,borderWidth:2.5}]},
+    options:{responsive:true,maintainAspectRatio:false,animation:false,interaction:{mode:"index",intersect:false},
+    plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`${c.dataset.label}: ${money(c.raw)}`}}},
+    scales:{x:{grid:{display:false},ticks:{maxTicksLimit:8,autoSkip:true}},y:{ticks:{callback:v=>short(v)},grid:{color:P.soft2}}}}});
+  const c=C(), fx=num(c.fx)||1, lines=c.lines.filter(l=>num(l.amt)>0);
+  const base=[P.keep,P.sell,P.gold,P.bad,P.muted,P.ink];
+  const cols=lines.map((_,i)=>mix(base[i%base.length],1-Math.floor(i/base.length)*0.35));
+  upsert("budgetChart",{type:"doughnut",data:{labels:lines.map(l=>l.name),datasets:[{data:lines.map(l=>Math.round(num(l.amt)/fx)),backgroundColor:cols,borderColor:P.surface,borderWidth:2}]},
+    options:{responsive:true,maintainAspectRatio:false,animation:false,cutout:"62%",plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`${c.label}: ${money(c.raw)}/mo`}}}}});
+  $("budgetLegend").innerHTML=lines.map((l,i)=>`<span><i style="background:${cols[i]}"></i>${esc(l.name)}</span>`).join("");
+}
+function mix(color,alpha){ // returns rgba from hex
+  const h=color.replace("#",""); if(h.length!==6) return color; const n=parseInt(h,16); return `rgba(${n>>16&255},${n>>8&255},${n&255},${alpha})`; }
+function upsert(id,cfg){ if(charts[id]){ charts[id].destroy(); } charts[id]=new Chart($(id),cfg); }
+
+/* ---------- persistence ---------- */
+const LS="keepsell.model.v1";
+let saveTimer=null;
+function setSaveState(t){ $("saveState").textContent=t; }
+function save(){ clearTimeout(saveTimer); saveTimer=setTimeout(async()=>{
+  try{ if(uid) localStorage.setItem(LS+"."+uid,JSON.stringify(S)); }catch(e){}
+  if(sb&&uid){ const {error}=await sb.from("user_models").upsert({user_id:uid,data:JSON.parse(JSON.stringify(S)),updated_at:new Date().toISOString()});
+    setSaveState(error?"Couldn't reach the server; saved on this device":"Saved to your account"); }
+  else setSaveState(uid==="local"?"Test mode: saved on this device only":"Saved on this device");
+},1200); }
+
+/* ---------- events ---------- */
+document.addEventListener("input",e=>{
+  const t=e.target;
+  if(t.dataset.path){ const v=t.tagName==="SELECT"?t.value:num(t.value); setP(S,t.dataset.path,v); render(); save(); return; }
+  if(t.dataset.list){ const arr=t.dataset.list==="aus"?S.aus:C().lines; const it=arr[+t.dataset.i]; it[t.dataset.k]=t.dataset.k==="amt"?num(t.value):t.value; render(); save(); return; }
+  if(t.dataset.lad!==undefined){ const a=S.ladder[+t.dataset.lad]; const k=t.dataset.k; a[k]=["balance","rate","revert"].includes(k)?num(t.value):t.value; render(); save(); return; }
+  if(t.dataset.c){ const c=C(); c[t.dataset.c]=t.dataset.c==="fx"?num(t.value):t.value; if(t.dataset.c==="name"){ const o=$("cSel").selectedOptions[0]; if(o) o.textContent=t.value; } if(t.dataset.c==="fx"||t.dataset.c==="cur"){ $("budgetCur").textContent=`${c.cur} per month · ${num(c.fx).toLocaleString("en-AU")} ${c.cur} = A$1`; } render(); save(); return; }
+  if(t.id==="usedGroups"){ S.usedGroups=t.value; render(); renderOffers(); save(); }
+});
+document.addEventListener("change",e=>{ if(e.target.id==="cSel"){ S.country=e.target.value; renderLists(); render(); save(); } });
+document.addEventListener("click",e=>{
+  const b=e.target.closest("button"); if(!b) return;
+  if(b.dataset.del){ const arr=b.dataset.del==="aus"?S.aus:C().lines; arr.splice(+b.dataset.i,1); renderLists(); render(); save(); }
+  else if(b.dataset.dellad!==undefined){ S.ladder.splice(+b.dataset.dellad,1); renderLists(); render(); save(); }
+  else if(b.dataset.status){ S.status=b.dataset.status; fillFields(); render(); save(); }
+  else if(b.dataset.tab){ showTab(b.dataset.tab); }
+  else if(b.dataset.f){ offerFilter=b.dataset.f; document.querySelectorAll("#offerFilter button").forEach(x=>x.setAttribute("aria-pressed",String(x===b))); renderOffers(); }
+});
+$("addAus").onclick=()=>{ S.aus.push({name:"New item",amt:0}); renderLists(); render(); save(); };
+$("addLine").onclick=()=>{ C().lines.push({name:"New item",amt:0}); renderLists(); render(); save(); };
+$("addAcct").onclick=()=>{ S.ladder.push({bank:"New account",group:"",balance:0,rate:0,introEnd:"",revert:0,cond:""}); renderLists(); render(); save(); };
+$("addCountry").onclick=()=>{ const c=C(); const key="c"+Date.now().toString(36); const fx=0.65, f=num(c.fx)||1;
+  S.countries[key]={name:"New country",city:"",cur:"USD",fx,lines:c.lines.map(l=>({name:l.name,amt:Math.round(num(l.amt)/f*fx)}))}; S.country=key; renderLists(); render(); save(); $("cName").focus(); };
+$("delCountry").onclick=()=>{ if(Object.keys(S.countries).length<2) return; delete S.countries[S.country]; S.country=Object.keys(S.countries)[0]; renderLists(); render(); save(); };
+$("resetBtn").onclick=()=>{ $("resetConfirm").hidden=false; $("resetBtn").hidden=true; };
+$("resetNo").onclick=()=>{ $("resetConfirm").hidden=true; $("resetBtn").hidden=false; };
+$("resetYes").onclick=()=>{ S=clone(DEF); fillFields(); renderLists(); render(); save(); $("resetConfirm").hidden=true; $("resetBtn").hidden=false; };
+
+function showTab(t){ tab=t; document.querySelectorAll("#tabs button").forEach(b=>b.setAttribute("aria-selected",String(b.dataset.tab===t)));
+  document.querySelectorAll("section.panel").forEach(p=>p.hidden=p.dataset.panel!==t);
+  try{ localStorage.setItem("keepsell.tab",t); }catch(e){}
+  if(t==="offers") renderOffers(); render(); }
+
+/* theme changes re-color charts */
+try{ matchMedia("(prefers-color-scheme: dark)").addEventListener("change",()=>render()); }catch(e){}
+new MutationObserver(()=>render()).observe(document.documentElement,{attributes:true,attributeFilter:["data-theme"]});
+
+/* ---------- boot ---------- */
+const CFG=window.KS_CONFIG||{};
+let sb=null, signUpMode=false, isAdmin=false, booted=false;
+function gateMsg(t,cls){ const m=$("authMsg"); m.textContent=t||""; m.className="gate-msg"+(cls?" "+cls:""); }
+function showGate(){ $("gate").hidden=false; $("app").hidden=true; }
+function setMode(up){ signUpMode=up; $("authSubmit").textContent=up?"Create account":"Sign in"; $("modeText").textContent=up?"Already have an account?":"New here?"; $("modeToggle").textContent=up?"Sign in":"Create your account"; $("passHint").hidden=!up; $("authPass").autocomplete=up?"new-password":"current-password"; gateMsg(""); }
+$("modeToggle").onclick=()=>setMode(!signUpMode);
+if(CFG.buyUrl) $("buyLink").href=CFG.buyUrl; else $("buyLink").hidden=true;
+if(CFG.productBlurb) $("gateLead").textContent=CFG.productBlurb;
+
+async function loadOffers(){
+  try{ const r=await fetch("offers.json?ts="+Date.now(),{cache:"no-store"}); if(!r.ok) throw 0; OFFERS=await r.json(); offersState="ok"; }
+  catch(e){ OFFERS=null; offersState="none"; }
+  renderOffers(); render();
+}
+/* Test mode: no Supabase configured, so open straight in and save on this device */
+function enterLocal(){
+  uid="local"; $("acctBar").hidden=true; $("testMode").hidden=false; $("membersTab").hidden=true;
+  $("gate").hidden=true; $("app").hidden=false;
+  try{ const saved=localStorage.getItem(LS+"."+uid); S=saved?merge(clone(DEF),JSON.parse(saved)):clone(DEF); }catch(e){ S=clone(DEF); }
+  buildFields(); booted=true;
+  let startTab="compare"; const h=(location.hash||"").slice(1); try{ startTab=localStorage.getItem("keepsell.tab")||startTab; }catch(e){}
+  if(document.querySelector(`[data-panel="${h}"]`)) startTab=h; if(startTab==="members") startTab="compare";
+  fillFields(); renderLists(); showTab(startTab);
+  setSaveState("Test mode: saved on this device only");
+  loadOffers();
+}
+async function enterApp(user){
+  uid=user.id; $("whoami").textContent=user.email||"";
+  const {data:member}=await sb.rpc("is_member");
+  if(!member){ $("gate").hidden=false; $("app").hidden=true; $("authForm").hidden=true; $("noAccess").hidden=false; $("naEmail").textContent=user.email||""; return; }
+  const {data:admin}=await sb.rpc("is_admin"); isAdmin=!!admin; $("membersTab").hidden=!isAdmin;
+  $("gate").hidden=true; $("app").hidden=false;
+  // per-user local cache first, then server copy
+  try{ const saved=localStorage.getItem(LS+"."+uid); S=saved?merge(clone(DEF),JSON.parse(saved)):clone(DEF); }catch(e){ S=clone(DEF); }
+  const {data:row,error}=await sb.from("user_models").select("data").eq("user_id",uid).maybeSingle();
+  if(!error&&row&&row.data){ S=merge(clone(DEF),row.data); setSaveState("Saved to your account"); }
+  else setSaveState(error?"Couldn't reach the server; saved on this device":"Your changes will save to your account");
+  if(!booted){ buildFields(); booted=true;
+    let startTab="compare"; const h=(location.hash||"").slice(1); try{ startTab=localStorage.getItem("keepsell.tab")||startTab; }catch(e){}
+    if(document.querySelector(`[data-panel="${h}"]`)) startTab=h; if(startTab==="members"&&!isAdmin) startTab="compare";
+    fillFields(); renderLists(); showTab(startTab); }
+  else { fillFields(); renderLists(); render(); }
+  loadOffers();
+  if(isAdmin) loadMembers();
+}
+$("authForm").addEventListener("submit",async e=>{
+  e.preventDefault(); if(!sb) return;
+  const email=$("authEmail").value.trim().toLowerCase(), password=$("authPass").value;
+  if(!/^\S+@\S+\.\S+$/.test(email)){ gateMsg("Enter a valid email address.","err"); return; }
+  if(password.length<8){ gateMsg("Passwords need at least 8 characters.","err"); return; }
+  $("authSubmit").disabled=true; gateMsg(signUpMode?"Creating your account…":"Signing in…");
+  const res = signUpMode? await sb.auth.signUp({email,password}) : await sb.auth.signInWithPassword({email,password});
+  $("authSubmit").disabled=false;
+  if(res.error){ gateMsg(signUpMode?res.error.message:"That email and password don't match. Check them, or create an account if you're new.","err"); return; }
+  if(signUpMode && !res.data.session){ gateMsg("Account created. Check your email to confirm it, then sign in.","ok"); setMode(false); return; }
+  gateMsg(""); enterApp(res.data.user);
+});
+async function signOut(){ await sb.auth.signOut(); uid=null; $("authForm").hidden=false; $("noAccess").hidden=true; $("authPass").value=""; setMode(false); showGate(); }
+$("signOut").onclick=signOut; $("naSignOut").onclick=signOut;
+$("recheck").onclick=async()=>{ const {data}=await sb.auth.getUser(); if(data&&data.user){ $("authForm").hidden=false; $("noAccess").hidden=true; enterApp(data.user); } };
+
+/* ---------- members admin ---------- */
+let pendingRemove=null;
+async function loadMembers(){
+  const {data,error}=await sb.from("members").select("email,note,added_at").order("added_at",{ascending:false});
+  if(error){ $("memberList").innerHTML=`<div class="empty">Couldn't load members: ${esc(error.message)}</div>`; return; }
+  $("memberCount").textContent=data.length+(data.length===1?" person":" people");
+  $("memberList").innerHTML=data.length?data.map(m=>`<div class="member-row"><span class="email">${esc(m.email)}${m.note?`<br><span class="small muted">${esc(m.note)}</span>`:""}</span><span class="small muted">${new Date(m.added_at).toLocaleDateString("en-AU",{day:"numeric",month:"short"})}</span><button class="btn danger" type="button" data-remove="${esc(m.email)}">Remove</button></div>`).join(""):`<div class="empty">No members yet. Add a buyer's email to give them access.</div>`;
+}
+$("addMemberForm").addEventListener("submit",async e=>{
+  e.preventDefault(); const email=$("newEmail").value.trim().toLowerCase(), note=$("newNote").value.trim();
+  const msg=$("memberMsg");
+  if(!/^\S+@\S+\.\S+$/.test(email)){ msg.textContent="Enter a valid email."; msg.style.color="var(--bad)"; return; }
+  const {error}=await sb.from("members").upsert({email,note:note||null});
+  if(error){ msg.textContent="Couldn't add: "+error.message; msg.style.color="var(--bad)"; return; }
+  msg.textContent=`Added ${email}`; msg.style.color="var(--good)"; $("newEmail").value=""; $("newNote").value=""; loadMembers();
+});
+document.addEventListener("click",e=>{ const b=e.target.closest("[data-remove]"); if(!b) return; pendingRemove=b.dataset.remove; $("removeWho").textContent=pendingRemove; $("removeConfirm").hidden=false; });
+$("removeNo").onclick=()=>{ pendingRemove=null; $("removeConfirm").hidden=true; };
+$("removeYes").onclick=async()=>{ if(!pendingRemove) return; const {error}=await sb.from("members").delete().eq("email",pendingRemove); $("removeConfirm").hidden=true; pendingRemove=null; if(error) $("memberCount").textContent="Couldn't remove: "+error.message; loadMembers(); };
+
+/* ---------- start ---------- */
+(async()=>{
+  setMode(false);
+  if(!window.supabase||!CFG.supabaseUrl||!CFG.supabaseAnonKey||/YOUR_/.test(CFG.supabaseUrl)){ enterLocal(); return; }
+  sb=window.supabase.createClient(CFG.supabaseUrl,CFG.supabaseAnonKey,{auth:{persistSession:true,autoRefreshToken:true}});
+  const {data}=await sb.auth.getSession();
+  if(data&&data.session) enterApp(data.session.user); else showGate();
+})();
+})();
+</script>
+</body>
+</html>
